@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-# curva_mestra_system_v2
 # Curva Mestra - Sistema de Gestão de Estoque Rennova
 
 Sistema SaaS multi-tenant para gestão completa de estoque de produtos de harmonização facial da marca Rennova. O sistema oferece controle de inventário, gestão de lotes, rastreabilidade de produtos e relatórios analíticos para clínicas de estética.
@@ -384,4 +382,3 @@ Para suporte técnico ou dúvidas sobre o sistema:
 ---
 
 **Desenvolvido com ❤️ por Guilherme S. Scandelari**
->>>>>>> eaa3eff (Initial commit)
