@@ -1,0 +1,19 @@
+{
+  "id": "base",
+  "name": "Base Environment",
+  "values": [
+    {
+      "key": "base_url",
+      "value": "https://us-central1-curva-mestra.cloudfunctions.net/api",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}

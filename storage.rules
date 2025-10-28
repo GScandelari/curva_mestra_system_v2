@@ -1,0 +1,45 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserRole() {
+      return request.auth.token.role;
+    }
+    
+    function getUserClinicId() {
+      return request.auth.token.clinic_id;
+    }
+    
+    function isSystemAdmin() {
+      return getUserRole() == 'system_admin';
+    }
+    
+    function belongsToUserClinic(clinicId) {
+      return getUserClinicId() == clinicId;
+    }
+
+    // Invoice attachments - clinic-scoped
+    match /invoices/{clinicId}/{invoiceId}/{fileName} {
+      allow read, write: if isAuthenticated() && (
+        isSystemAdmin() || belongsToUserClinic(clinicId)
+      );
+    }
+
+    // Product images - global, readable by all authenticated users
+    match /products/{productId}/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isSystemAdmin();
+    }
+
+    // User profile images
+    match /users/{userId}/{fileName} {
+      allow read, write: if isAuthenticated() && (
+        isSystemAdmin() || request.auth.uid == userId
+      );
+    }
+  }
+}

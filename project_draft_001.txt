@@ -1,0 +1,195 @@
+# Especificações Técnicas para o MVP do SaaS de Gestão de Inventário de Produtos de Harmonização Facial - Rennova
+
+## 1. Introdução
+
+### 1.1 Objetivo
+Este documento define as especificações técnicas para o desenvolvimento do MVP (Minimum Viable Product) de um SaaS (Software as a Service) destinado à gestão de inventário de produtos de harmonização facial exclusivos da marca Rennova. O sistema será integrado à IA Kiro para suporte em processos de inteligência artificial, como sugestões de estoque ou alertas de validade.
+
+O MVP focará em funcionalidades essenciais de CRUD (Create, Read, Update, Delete) para entidades chave, com isolamento por clínica, autenticação segura e logging completo de ações. O sistema rodará sobre Firebase para backend, autenticação e banco de dados em tempo real.
+
+### 1.2 Escopo
+- **Catálogo de Produtos**: Exclusivo Rennova, pré-carregado e gerenciável apenas pelo system_admin.
+- **Frentes de Interface**: 
+  - Front-end para end-users (clinic_admin e clinic_user).
+  - Front-end administrativo para system_admin.
+- **Backend**: API RESTful para todos os endpoints.
+- **Autenticação**: Via email e senha, gerenciada pelo Firebase Authentication.
+- **Estrutura Lógica**: Clínicas como entidades isoladas; múltiplas clínicas como clientes SaaS.
+- **Funcionalidades Principais**: Cadastro de Nota Fiscal, Produto, Paciente, Solicitação; Dashboard de Inventário.
+- **Observações**:
+  - Permissões granulares por roles.
+  - Logging completo de ações para rastreabilidade.
+
+### 1.3 Tecnologias
+- **Backend**: Node.js com Express.js para API RESTful; Firebase Functions para lógica serverless.
+- **Banco de Dados**: Firebase Firestore (NoSQL) para dados estruturados; Realtime Database para atualizações em tempo real (ex.: dashboard).
+- **Autenticação**: Firebase Authentication.
+- **Front-end**: React.js para interfaces web responsivas; possivelmente integrado com Firebase Hosting.
+- **Outros**: Firebase Storage para upload de documentos (ex.: notas fiscais); Cloud Logging para registros de ações.
+
+### 1.4 Premissas e Restrições
+- Cada clínica é isolada: Dados não são compartilhados entre clínicas sem aprovação do system_admin.
+- Catálogo inicial de produtos Rennova será pré-carregado via script de inicialização.
+- MVP não inclui integrações externas (ex.: pagamentos, ERP), mas endpoints serão projetados para extensibilidade.
+- Suporte a múltiplos idiomas não é prioritário; foco em português.
+- Sistema escalável via Firebase para múltiplas clínicas.
+
+## 2. Arquitetura do Sistema
+
+### 2.1 Visão Geral
+- **Modelo SaaS Multi-Tenant**: Cada clínica é um tenant isolado logicamente via campos de ID de clínica no Firestore.
+- **Componentes**:
+  - **Frontend End-User**: Interface para clinic_admin e clinic_user, com acesso restrito à própria clínica.
+  - **Frontend System_Admin**: Interface global para gerenciamento de todas as clínicas, produtos e aprovações.
+  - **Backend API**: Endpoints RESTful protegidos por autenticação Firebase.
+  - **Banco de Dados**: Coleções no Firestore: Clinics, Users, Products, Invoices, Patients, Requests, Logs.
+- **Fluxo de Dados**: Todas as operações passam pela API, que valida permissões e logs ações antes de interagir com o Firestore.
+
+### 2.2 Diagrama de Alto Nível
+(Descrição textual; em desenvolvimento real, usar ferramentas como Lucidchart para diagrama visual.)
+
+- Usuário → Autenticação Firebase → Token JWT → API Endpoint (valida role e clinic_id) → Firestore/Realtime DB → Resposta.
+
+## 3. Autenticação e Autorização
+
+### 3.1 Autenticação
+- Método: Email e senha via Firebase Authentication.
+- Fluxo:
+  - Registro: Endpoint POST /auth/register (com role e clinic_id validados pelo system_admin para novos usuários).
+  - Login: POST /auth/login → Retorna token JWT.
+  - Recuperação: Integração com Firebase para reset de senha.
+- Todos os endpoints API requerem header Authorization: Bearer <token>.
+
+### 3.2 Roles e Permissões
+- **system_admin**: Acesso total a todas clínicas, aprovações de produtos, gerenciamento de usuários globais.
+- **clinic_admin**: Acesso total à própria clínica; pode criar clinic_user com permissões granulares (ex.: CRUD em Patients, mas apenas Read em Products).
+- **clinic_user**: Acesso limitado baseado em permissões atribuídas (ex.: array de permissões como ['create_patient', 'read_inventory']).
+- Permissões Granulares: Armazenadas como array no documento User no Firestore. Exemplo: ['create_invoice', 'update_patient', 'delete_request'].
+- Validação: Middleware na API verifica role e permissões antes de executar ação.
+
+## 4. Estrutura do Banco de Dados (Firestore)
+
+### 4.1 Coleções Principais
+- **Clinics** (ID: clinic_id)
+  - Fields: name, address, admin_user_id, created_at.
+  - Subcoleções: Users, Invoices, Patients, Requests, Inventory (itens de estoque por produto).
+
+- **Users** (ID: user_id, global ou subcoleção de Clinics)
+  - Fields: email, role (system_admin/clinic_admin/clinic_user), clinic_id (null para system_admin), permissions (array), created_at.
+
+- **Products** (Global, gerenciada por system_admin)
+  - Fields: product_id, name, description, rennova_code, status (approved/pending), requested_by_clinic_id, created_at.
+
+- **Invoices** (Subcoleção de Clinics)
+  - Fields: invoice_number, emission_date, products (array de {product_id, quantity, expiration_date, lot}), status (approved/pending if new product), created_at.
+
+- **Patients** (Subcoleção de Clinics)
+  - Fields: first_name, last_name, birth_date, phone, email, history (array de request_ids), created_at.
+
+- **Requests** (Subcoleção de Clinics)
+  - Fields: request_date, patient_id, products_used (array de {product_id, quantity}), status (pending/consumed), created_at.
+
+- **Logs** (Global)
+  - Fields: user_id, clinic_id, action_type (auth/nav/create/update/delete), details (JSON de dados alterados), timestamp.
+
+- **Inventory** (Subcoleção de Clinics, por produto)
+  - Fields: product_id, quantity_in_stock, expiration_dates (array de {date, lot, quantity}), last_update.
+
+### 4.2 Índices e Regras de Segurança
+- Índices: Para buscas eficientes (ex.: por clinic_id + product_id).
+- Regras Firebase: Leitura/escrita restrita por user UID e role (ex.: system_admin pode escrever em Products globais).
+
+## 5. API RESTful Endpoints
+
+Todos os endpoints seguem padrões RESTful, com base URL /api/v1. Respostas em JSON. Erros padronizados (ex.: 401 Unauthorized).
+
+### 5.1 Autenticação
+- POST /auth/register {email, password, role, clinic_id} → Cria usuário (apenas system_admin ou clinic_admin).
+- POST /auth/login {email, password} → {token}.
+
+### 5.2 Clínicas (Apenas system_admin)
+- POST /clinics {name, address, admin_email} → Cria clínica e admin inicial.
+- GET /clinics → Lista todas.
+- GET /clinics/:id → Detalhes.
+- PUT /clinics/:id → Atualiza.
+- DELETE /clinics/:id → Exclui.
+
+### 5.3 Produtos
+- POST /products {name, description, rennova_code, clinic_id} → Cria pendente (clinic_admin/user); aprova (system_admin).
+- GET /products → Lista aprovados (global).
+- GET /products/pending → Lista pendentes (system_admin).
+- PUT /products/:id/approve → Aprova (system_admin); adiciona a inventário da clínica solicitante.
+- CRUD padrão para system_admin.
+
+### 5.4 Notas Fiscais (Por clínica)
+- POST /clinics/:id/invoices {invoice_number, emission_date, products[]} → Cria; verifica produtos existentes; cria pendentes se necessário; atualiza inventory ao aprovar.
+- GET /clinics/:id/invoices → Lista.
+- PUT /clinics/:id/invoices/:invoice_id → Atualiza.
+- DELETE /clinics/:id/invoices/:invoice_id → Exclui.
+
+### 5.5 Pacientes (Por clínica; system_admin pode associar)
+- POST /clinics/:id/patients {first_name, last_name, birth_date, phone, email} → Cria.
+- GET /clinics/:id/patients → Lista.
+- PUT /clinics/:id/patients/:patient_id → Atualiza.
+- DELETE /clinics/:id/patients/:patient_id → Exclui.
+
+### 5.6 Solicitações (Por clínica)
+- POST /clinics/:id/requests {request_date, patient_id, products_used[]} → Cria; atualiza inventory (baixa estoque ao aceitar consumo).
+- GET /clinics/:id/requests → Lista.
+- PUT /clinics/:id/requests/:request_id/accept → Aceita consumo.
+- CRUD padrão.
+
+### 5.7 Dashboard (GET /clinics/:id/dashboard)
+- Retorna agregados: {products_in_stock: {}, expirations_near: [], patients_count: N, requests_recent: []}.
+- Usa queries Firestore para agregação.
+
+### 5.8 Logs (GET /logs?clinic_id= &user_id= ) → Filtrados por system_admin.
+
+## 6. Interfaces Front-end
+
+### 6.1 Front-end End-User (Clinic)
+- Páginas: Login, Dashboard Inventário, Cadastro/Lista de Notas Fiscais, Produtos (pendentes), Pacientes, Solicitações.
+- Recursos: Formulários para CRUD; Tabelas interativas; Alertas para validades próximas.
+- Responsivo para desktop/mobile.
+
+### 6.2 Front-end System_Admin
+- Páginas: Login, Lista de Clínicas, Aprovações Pendentes (produtos), Gerenciamento de Usuários, Logs Globais.
+- Recursos: Visão agregada de todas clínicas; Ferramentas de aprovação em batch.
+
+## 7. Funcionalidades Detalhadas
+
+### 7.1 Cadastro de Nota Fiscal
+- Formulário: Número, Data, Quantidade de produtos, Seleção de produtos (dropdown do catálogo).
+- Para cada produto: Quantidade, Validade, Lote.
+- Se produto novo: Cria solicitação pendente; notifica system_admin.
+- Ao aprovar: Adiciona a Products e atualiza Inventory da clínica.
+
+### 7.2 Cadastro de Produto
+- Iniciado via Nota Fiscal ou diretamente (pendente).
+- Dashboard da clínica mostra pendentes.
+
+### 7.3 Cadastro de Paciente
+- Formulário básico; Associado a clinic_id.
+- Histórico: Linkado a requests.
+
+### 7.4 Cadastro de Solicitação
+- Seleciona paciente, data, produtos (verifica estoque).
+- Ao aceitar: Baixa quantity_in_stock no Inventory.
+
+### 7.5 Dashboard Inventário
+- Métricas: Estoque por produto, Validades (alertas <30 dias), Contagem de pacientes/solicitações.
+- Gráficos: Usar Chart.js para visualizações.
+
+## 8. Logging e Rastreabilidade
+- Todas ações (auth, nav, CRUD) logadas em Logs collection.
+- Detalhes: User ID, Ação, Dados antes/depois (diff JSON), Timestamp.
+- Integração com Firebase Functions para triggers automáticos em writes.
+
+## 9. Testes e Deploy
+- **Testes**: Unitários (API), Integração (Firestore), E2E (front-end com Cypress).
+- **Deploy**: Firebase Hosting para front-ends; Functions para API.
+- **Monitoramento**: Firebase Performance e Crashlytics.
+
+Documento criado em 24/10/2025. Versão 1.0.
+Arquivo firabse_config.txt contém os dados do projeto no firebase.
+Criar collection para uso no postman e documentação.

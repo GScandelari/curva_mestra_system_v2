@@ -1,0 +1,36 @@
+{
+  "name": "curva-mestra",
+  "version": "1.0.0",
+  "description": "Rennova Inventory Management SaaS Platform",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:functions\" \"npm run dev:client\" \"npm run dev:admin\"",
+    "dev:functions": "cd functions && npm run serve",
+    "dev:client": "cd client && npm start",
+    "dev:admin": "cd admin && npm start",
+    "build": "npm run build:functions && npm run build:client && npm run build:admin",
+    "build:functions": "cd functions && npm run build",
+    "build:client": "cd client && npm run build",
+    "build:admin": "cd admin && npm run build",
+    "deploy": "firebase deploy",
+    "deploy:staging": "firebase use curva-mestra-staging && firebase deploy",
+    "deploy:production": "firebase use curva-mestra && firebase deploy",
+    "deploy:functions": "firebase deploy --only functions",
+    "deploy:hosting": "firebase deploy --only hosting",
+    "deploy:client": "firebase deploy --only hosting:client",
+    "deploy:admin": "firebase deploy --only hosting:admin",
+    "deploy:firestore": "firebase deploy --only firestore",
+    "deploy:storage": "firebase deploy --only storage",
+    "predeploy": "npm run build && npm run test",
+    "test": "npm run test:functions && npm run test:client && npm run test:admin",
+    "test:functions": "cd functions && npm test",
+    "test:client": "cd client && npm test -- --run",
+    "test:admin": "cd admin && npm test -- --run"
+  },
+  "keywords": ["inventory", "saas", "firebase", "react", "rennova"],
+  "author": "Curva Mestra Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

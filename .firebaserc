@@ -1,0 +1,18 @@
+{
+  "projects": {
+    "default": "curva-mestra"
+  },
+  "targets": {
+    "curva-mestra": {
+      "hosting": {
+        "client": [
+          "curva-mestra"
+        ],
+        "admin": [
+          "curva-mestra-admin"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

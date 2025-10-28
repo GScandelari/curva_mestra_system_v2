@@ -1,0 +1,27 @@
+Nome do projeto: Curva Mestra
+ID do projeto: curva-mestra
+Número do projeto: 521885400577
+Chave de API da Web: AIzaSyBtNXznf7cvdzGCcBym84ux-SjJrrKaSJU
+
+
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBtNXznf7cvdzGCcBym84ux-SjJrrKaSJU",
+  authDomain: "curva-mestra.firebaseapp.com",
+  projectId: "curva-mestra",
+  storageBucket: "curva-mestra.firebasestorage.app",
+  messagingSenderId: "521885400577",
+  appId: "1:521885400577:web:e4eed211455f2976618a00",
+  measurementId: "G-17C3GEBK3P"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);

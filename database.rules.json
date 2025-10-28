@@ -1,0 +1,18 @@
+{
+  "rules": {
+    "clinics": {
+      "$clinic_id": {
+        ".read": "auth != null && (auth.token.role == 'system_admin' || auth.token.clinic_id == $clinic_id)",
+        ".write": "auth != null && (auth.token.role == 'system_admin' || (auth.token.clinic_id == $clinic_id && auth.token.role == 'clinic_admin'))",
+        "dashboard": {
+          ".read": "auth != null && (auth.token.role == 'system_admin' || auth.token.clinic_id == $clinic_id)",
+          ".write": "auth != null && (auth.token.role == 'system_admin' || auth.token.clinic_id == $clinic_id)"
+        },
+        "notifications": {
+          ".read": "auth != null && (auth.token.role == 'system_admin' || auth.token.clinic_id == $clinic_id)",
+          ".write": "auth != null && (auth.token.role == 'system_admin' || auth.token.clinic_id == $clinic_id)"
+        }
+      }
+    }
+  }
+}

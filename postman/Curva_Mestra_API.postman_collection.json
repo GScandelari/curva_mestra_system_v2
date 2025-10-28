@@ -1,0 +1,336 @@
+{
+  "info": {
+    "name": "Curva Mestra API",
+    "description": "API collection for Curva Mestra System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "refresh"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Clinics",
+      "item": [
+        {
+          "name": "List Clinics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/clinics",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "clinics"]
+            }
+          }
+        },
+        {
+          "name": "Create Clinic",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/clinics",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "clinics"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Example Clinic\",\n    \"cnpj\": \"12.345.678/0001-90\",\n    \"email\": \"clinic@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get Clinic by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/clinics/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "clinics", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "clinic-id"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Clinic",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/clinics/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "clinics", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "clinic-id"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Updated Clinic Name\",\n    \"email\": \"updated@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Toggle Clinic Status",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/clinics/:id/toggle-status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "clinics", ":id", "toggle-status"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "clinic-id"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "List Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/products",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "products"]
+            }
+          }
+        },
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/products",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "products"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Example Product\",\n    \"description\": \"Product description\",\n    \"price\": 99.99\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get Product by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/products/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "products", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "product-id"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/products/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "products", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "product-id"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Updated Product Name\",\n    \"price\": 149.99\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "List Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "notifications"]
+            }
+          }
+        },
+        {
+          "name": "Mark Notification as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications/:id/read",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "notifications", ":id", "read"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "notification-id"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Monitoring",
+      "item": [
+        {
+          "name": "Get System Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/monitoring/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "monitoring", "health"]
+            }
+          }
+        },
+        {
+          "name": "Get System Metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/monitoring/metrics",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "monitoring", "metrics"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Logs",
+      "item": [
+        {
+          "name": "Get System Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/logs",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "logs"]
+            }
+          }
+        },
+        {
+          "name": "Get Clinic Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/logs/clinic/:clinicId",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "logs", "clinic", ":clinicId"],
+              "variable": [
+                {
+                  "key": "clinicId",
+                  "value": "clinic-id"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://us-central1-curva-mestra.cloudfunctions.net/api"
+    }
+  ]
+}

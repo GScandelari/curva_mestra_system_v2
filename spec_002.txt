@@ -1,0 +1,7 @@
+Para a aplicação cliente, devemos ter a página admin/clinics com toda a hud pronta para a gestão das clínicas.
+Devemos listar todas as clínicas existentes, ter a opção de visualizar a clínica em questão, editar e criar novas clínicas.
+
+Para a aplicação administrativa, devemos ter no dashboard um menu lateral para gerenciar individualmente cada opção da plataforma
+clínicas, produtos, notas fiscais. neste momento, iremos focar no desenvolvimento apenas da gestão via UI de clínicas.
+
+Devemos focar no básico e funcional dessa necessidade.

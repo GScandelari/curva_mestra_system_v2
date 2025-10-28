@@ -1,0 +1,333 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserRole() {
+      return request.auth.token.role;
+    }
+    
+    function getUserClinicId() {
+      return request.auth.token.clinic_id;
+    }
+    
+    function isSystemAdmin() {
+      return getUserRole() == 'system_admin';
+    }
+    
+    function isClinicAdmin() {
+      return getUserRole() == 'clinic_admin';
+    }
+    
+    function isClinicUser() {
+      return getUserRole() == 'clinic_user';
+    }
+    
+    function belongsToUserClinic(clinicId) {
+      return getUserClinicId() == clinicId;
+    }
+    
+    function hasPermission(permission) {
+      return permission in request.auth.token.permissions;
+    }
+
+    // Data validation functions
+    function isValidEmail(email) {
+      return email.matches('.*@.*\\..*');
+    }
+    
+    function isValidRole(role) {
+      return role in ['system_admin', 'clinic_admin', 'clinic_user'];
+    }
+    
+    function isValidProductStatus(status) {
+      return status in ['approved', 'pending'];
+    }
+    
+    function isValidInvoiceStatus(status) {
+      return status in ['pending', 'approved', 'rejected'];
+    }
+    
+    function isValidRequestStatus(status) {
+      return status in ['pending', 'consumed', 'cancelled'];
+    }
+    
+    function isValidUnitType(unitType) {
+      return unitType in ['ml', 'units', 'vials'];
+    }
+    
+    function isValidClinicStatus(status) {
+      return status in ['active', 'inactive'];
+    }
+    
+    function isValidCNPJ(cnpj) {
+      return cnpj.matches('[0-9]{2}\\.[0-9]{3}\\.[0-9]{3}/[0-9]{4}-[0-9]{2}');
+    }
+    
+    function isValidBrazilianPhone(phone) {
+      return phone.matches('\\([0-9]{2}\\) [0-9]{4,5}-[0-9]{4}');
+    }
+
+    // Clinic isolation validation
+    function validateClinicIsolation(clinicId) {
+      return isSystemAdmin() || belongsToUserClinic(clinicId);
+    }
+
+    // Required fields validation
+    function hasRequiredUserFields() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['user_id', 'email', 'role', 'permissions', 'profile', 'created_at']) &&
+             data.profile.keys().hasAll(['first_name', 'last_name']);
+    }
+    
+    function hasRequiredClinicFields() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['clinic_id', 'name', 'address', 'admin_user_id', 'created_at', 'settings', 'status', 'cnpj', 'email', 'phone', 'city', 'updated_at']);
+    }
+    
+    function hasRequiredProductFields() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['product_id', 'name', 'description', 'rennova_code', 'category', 'unit_type', 'status', 'created_at']);
+    }
+
+    // Global Products collection - readable by all authenticated users
+    match /products/{productId} {
+      allow read: if isAuthenticated();
+      allow create: if (isSystemAdmin() || (isAuthenticated() && resource == null)) &&
+                       hasRequiredProductFields() &&
+                       isValidProductStatus(request.resource.data.status) &&
+                       isValidUnitType(request.resource.data.unit_type) &&
+                       request.resource.data.product_id == productId;
+      allow update: if isSystemAdmin() &&
+                       isValidProductStatus(request.resource.data.status) &&
+                       isValidUnitType(request.resource.data.unit_type);
+      allow delete: if isSystemAdmin();
+    }
+
+    // Global Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (
+        isSystemAdmin() || 
+        request.auth.uid == userId ||
+        (isClinicAdmin() && belongsToUserClinic(resource.data.clinic_id))
+      );
+      allow create: if (isSystemAdmin() || 
+        (isClinicAdmin() && belongsToUserClinic(request.resource.data.clinic_id)) ||
+        // Allow users to create their own profile if they are authenticated and it's their UID
+        (isAuthenticated() && request.auth.uid == userId && request.resource.data.user_id == userId)) &&
+        hasRequiredUserFields() &&
+        isValidEmail(request.resource.data.email) &&
+        isValidRole(request.resource.data.role) &&
+        request.resource.data.user_id == userId &&
+        // Clinic admins cannot create system admins (except for self-creation by system admin)
+        (isSystemAdmin() || request.resource.data.role != 'system_admin' || request.auth.uid == userId);
+      allow update: if (isSystemAdmin() || 
+        (isClinicAdmin() && belongsToUserClinic(resource.data.clinic_id)) ||
+        (request.auth.uid == userId)) &&
+        // Validate email if being updated
+        (!('email' in request.resource.data.diff(resource.data).affectedKeys()) || 
+         isValidEmail(request.resource.data.email)) &&
+        // Validate role if being updated
+        (!('role' in request.resource.data.diff(resource.data).affectedKeys()) || 
+         (isValidRole(request.resource.data.role) && 
+          (isSystemAdmin() || request.resource.data.role != 'system_admin'))) &&
+        // Cannot change user_id
+        request.resource.data.user_id == resource.data.user_id;
+      allow delete: if isSystemAdmin() || 
+        (isClinicAdmin() && belongsToUserClinic(resource.data.clinic_id));
+    }
+
+    // Clinics collection
+    match /clinics/{clinicId} {
+      allow read: if isAuthenticated() && validateClinicIsolation(clinicId);
+      allow create: if isSystemAdmin() &&
+                       hasRequiredClinicFields() &&
+                       request.resource.data.clinic_id == clinicId &&
+                       isValidClinicStatus(request.resource.data.status) &&
+                       isValidEmail(request.resource.data.email) &&
+                       isValidCNPJ(request.resource.data.cnpj) &&
+                       isValidBrazilianPhone(request.resource.data.phone);
+      allow update: if (isSystemAdmin() || (isClinicAdmin() && belongsToUserClinic(clinicId))) &&
+                       // Cannot change clinic_id
+                       request.resource.data.clinic_id == resource.data.clinic_id &&
+                       // Validate new fields if being updated
+                       (!('status' in request.resource.data.diff(resource.data).affectedKeys()) || 
+                        isValidClinicStatus(request.resource.data.status)) &&
+                       (!('email' in request.resource.data.diff(resource.data).affectedKeys()) || 
+                        isValidEmail(request.resource.data.email)) &&
+                       (!('cnpj' in request.resource.data.diff(resource.data).affectedKeys()) || 
+                        isValidCNPJ(request.resource.data.cnpj)) &&
+                       (!('phone' in request.resource.data.diff(resource.data).affectedKeys()) || 
+                        isValidBrazilianPhone(request.resource.data.phone));
+      allow delete: if isSystemAdmin();
+
+      // Clinic subcollections
+      match /invoices/{invoiceId} {
+        allow read: if isAuthenticated() && (
+          isSystemAdmin() || 
+          (belongsToUserClinic(clinicId) && hasPermission('read_invoice'))
+        );
+        allow create: if isAuthenticated() && (
+          isSystemAdmin() || 
+          (belongsToUserClinic(clinicId) && hasPermission('create_invoice'))
+        ) &&
+        // Validate required fields and clinic isolation
+        request.resource.data.keys().hasAll(['invoice_id', 'clinic_id', 'invoice_number', 'supplier', 'emission_date', 'products', 'status', 'created_by', 'created_at']) &&
+        request.resource.data.clinic_id == clinicId &&
+        request.resource.data.invoice_id == invoiceId &&
+        isValidInvoiceStatus(request.resource.data.status) &&
+        request.resource.data.products is list &&
+        request.resource.data.total_value >= 0;
+        allow update: if isAuthenticated() && (
+          isSystemAdmin() || 
+          (belongsToUserClinic(clinicId) && hasPermission('update_invoice'))
+        ) &&
+        // Cannot change invoice_id or clinic_id
+        request.resource.data.invoice_id == resource.data.invoice_id &&
+        request.resource.data.clinic_id == resource.data.clinic_id &&
+        // Validate status if being updated
+        (!('status' in request.resource.data.diff(resource.data).affectedKeys()) || 
+         isValidInvoiceStatus(request.resource.data.status));
+        allow delete: if isAuthenticated() && (
+          isSystemAdmin() || 
+          (belongsToUserClinic(clinicId) && hasPermission('delete_invoice'))
+        );
+      }
+
+      match /patients/{patientId} {
+        allow read: if isAuthenticated() && (
+          isSystemAdmin() || 
+          (belongsToUserClinic(clinicId) && hasPermission('read_patient'))
+        );
+        allow create: if isAuthenticated() && (
+          isSystemAdmin() || 
+          (belongsToUserClinic(clinicId) && hasPermission('create_patient'))
+        ) &&
+        // Validate required fields and clinic isolation
+        request.resource.data.keys().hasAll(['patient_id', 'clinic_id', 'first_name', 'last_name', 'birth_date', 'phone', 'email', 'created_at', 'updated_at']) &&
+        request.resource.data.clinic_id == clinicId &&
+        request.resource.data.patient_id == patientId &&
+        isValidEmail(request.resource.data.email) &&
+        request.resource.data.treatment_history is list &&
+        request.resource.data.medical_history is list;
+        allow update: if isAuthenticated() && (
+          isSystemAdmin() || 
+          (belongsToUserClinic(clinicId) && hasPermission('update_patient'))
+        ) &&
+        // Cannot change patient_id or clinic_id
+        request.resource.data.patient_id == resource.data.patient_id &&
+        request.resource.data.clinic_id == resource.data.clinic_id &&
+        // Validate email if being updated
+        (!('email' in request.resource.data.diff(resource.data).affectedKeys()) || 
+         isValidEmail(request.resource.data.email));
+        allow delete: if isAuthenticated() && (
+          isSystemAdmin() || 
+          (belongsToUserClinic(clinicId) && hasPermission('delete_patient'))
+        );
+      }
+
+      match /requests/{requestId} {
+        allow read: if isAuthenticated() && (
+          isSystemAdmin() || 
+          (belongsToUserClinic(clinicId) && hasPermission('read_request'))
+        );
+        allow create: if isAuthenticated() && (
+          isSystemAdmin() || 
+          (belongsToUserClinic(clinicId) && hasPermission('create_request'))
+        ) &&
+        // Validate required fields and clinic isolation
+        request.resource.data.keys().hasAll(['request_id', 'clinic_id', 'patient_id', 'request_date', 'treatment_type', 'products_used', 'status', 'performed_by', 'created_at']) &&
+        request.resource.data.clinic_id == clinicId &&
+        request.resource.data.request_id == requestId &&
+        isValidRequestStatus(request.resource.data.status) &&
+        request.resource.data.products_used is list;
+        allow update: if isAuthenticated() && (
+          isSystemAdmin() || 
+          (belongsToUserClinic(clinicId) && hasPermission('update_request'))
+        ) &&
+        // Cannot change request_id, clinic_id, or patient_id
+        request.resource.data.request_id == resource.data.request_id &&
+        request.resource.data.clinic_id == resource.data.clinic_id &&
+        request.resource.data.patient_id == resource.data.patient_id &&
+        // Validate status if being updated
+        (!('status' in request.resource.data.diff(resource.data).affectedKeys()) || 
+         isValidRequestStatus(request.resource.data.status));
+        allow delete: if isAuthenticated() && (
+          isSystemAdmin() || 
+          (belongsToUserClinic(clinicId) && hasPermission('delete_request'))
+        );
+      }
+
+      match /inventory/{inventoryId} {
+        allow read: if isAuthenticated() && (
+          isSystemAdmin() || 
+          (belongsToUserClinic(clinicId) && hasPermission('read_inventory'))
+        );
+        allow create: if isAuthenticated() && (
+          isSystemAdmin() || 
+          belongsToUserClinic(clinicId)
+        ) &&
+        // Validate required fields and clinic isolation
+        request.resource.data.keys().hasAll(['inventory_id', 'clinic_id', 'product_id', 'quantity_in_stock', 'minimum_stock_level', 'expiration_dates', 'last_update']) &&
+        request.resource.data.clinic_id == clinicId &&
+        request.resource.data.inventory_id == inventoryId &&
+        request.resource.data.quantity_in_stock >= 0 &&
+        request.resource.data.minimum_stock_level >= 0 &&
+        request.resource.data.expiration_dates is list;
+        allow update: if isAuthenticated() && (
+          isSystemAdmin() || 
+          belongsToUserClinic(clinicId)
+        ) &&
+        // Cannot change inventory_id, clinic_id, or product_id
+        request.resource.data.inventory_id == resource.data.inventory_id &&
+        request.resource.data.clinic_id == resource.data.clinic_id &&
+        request.resource.data.product_id == resource.data.product_id &&
+        // Validate quantities
+        request.resource.data.quantity_in_stock >= 0 &&
+        request.resource.data.minimum_stock_level >= 0;
+        allow delete: if isAuthenticated() && (
+          isSystemAdmin() || 
+          belongsToUserClinic(clinicId)
+        );
+      }
+    }
+
+    // Global Logs collection
+    match /logs/{logId} {
+      // System admins can read all logs, clinic users can read their clinic's logs
+      allow read: if isAuthenticated() && (
+        isSystemAdmin() || 
+        (resource.data.clinic_id != null && belongsToUserClinic(resource.data.clinic_id))
+      );
+      // Allow system to create logs (server-side only)
+      allow create: if request.resource.data.keys().hasAll(['log_id', 'user_id', 'action_type', 'resource_type', 'resource_id', 'timestamp']) &&
+                       request.resource.data.log_id == logId;
+      allow update: if false; // Logs should be immutable
+      allow delete: if isSystemAdmin(); // Only system admins can delete logs for cleanup
+    }
+
+    // Audit Logs collection for enhanced clinic management
+    match /audit_logs/{auditLogId} {
+      // System admins can read all audit logs, clinic admins can read their clinic's audit logs
+      allow read: if isAuthenticated() && (
+        isSystemAdmin() || 
+        (resource.data.details.clinic_id != null && belongsToUserClinic(resource.data.details.clinic_id))
+      );
+      // Allow system to create audit logs (server-side only)
+      allow create: if request.resource.data.keys().hasAll(['audit_log_id', 'user_id', 'action_type', 'resource_type', 'resource_id', 'timestamp', 'details']) &&
+                       request.resource.data.audit_log_id == auditLogId &&
+                       request.resource.data.resource_type in ['clinic', 'user', 'product', 'invoice', 'patient', 'request', 'inventory'] &&
+                       request.resource.data.action_type in ['created', 'updated', 'deleted', 'status_changed', 'activated', 'deactivated'];
+      allow update: if false; // Audit logs should be immutable
+      allow delete: if isSystemAdmin(); // Only system admins can delete audit logs for cleanup
+    }
+
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
